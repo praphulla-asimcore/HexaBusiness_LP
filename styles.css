@@ -31,3 +31,6 @@
 .hero-layout,.hero-bottom{z-index:2}
 @media(max-width:650px){.hero-video{opacity:.25;object-position:center center}.hero-video-shade{background:linear-gradient(90deg,rgba(8,10,26,.72),rgba(8,10,26,.5)),linear-gradient(0deg,rgba(8,10,26,.7),transparent 36%,rgba(8,10,26,.25))}}
 @media(prefers-reduced-motion:reduce){.hero-video{display:none}}
+/* Use the official transparent mark in the company proof section too. */
+.proof-hex{width:142px;height:142px;clip-path:none;background:none;display:grid;place-items:center;filter:drop-shadow(0 10px 24px rgba(89,55,183,.2))}
+.proof-hex img{display:block;width:100%;height:100%;object-fit:contain}
