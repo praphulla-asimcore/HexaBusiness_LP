@@ -66,12 +66,15 @@ if (!reduceMotion && 'IntersectionObserver' in window) {
 }
 
 // Count stats up from zero the first time they appear.
-document.querySelectorAll('.stat-grid b, .industry-stats b, .inner-stats b').forEach((stat) => {
+document.querySelectorAll('.stat-grid b, .industry-stats b, .inner-stats b, .client-intro strong').forEach((stat) => {
   const node = [...stat.childNodes].find((child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim());
-  const match = node?.textContent.match(/^(\D*)(\d+)(.*)$/);
-  if (reduceMotion || !match || Number(match[2]) >= 1000) return;
+  const match = node?.textContent.match(/^(\D*)([\d,]+)(.*)$/);
+  if (reduceMotion || !match) return;
   const [, prefix, value, suffix] = match;
-  const target = Number(value);
+  const target = Number(value.replace(/,/g, ''));
+  // Leave founding years such as 2002 as written.
+  if (!value.includes(',') && target >= 1900 && target <= 2100) return;
+  const format = (number) => (value.includes(',') ? number.toLocaleString('en-US') : String(number));
   node.textContent = `${prefix}0${suffix}`;
   let counted = false;
   whenVisible(stat, (visible) => {
@@ -80,12 +83,72 @@ document.querySelectorAll('.stat-grid b, .industry-stats b, .inner-stats b').for
     const start = performance.now();
     const step = (now) => {
       const progress = Math.min(1, (now - start) / 1400);
-      node.textContent = `${prefix}${Math.round(target * (1 - (1 - progress) ** 3))}${suffix}`;
+      node.textContent = `${prefix}${format(Math.round(target * (1 - (1 - progress) ** 3)))}${suffix}`;
       if (progress < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   });
 });
+
+// Magnetic controls lean towards the pointer.
+if (finePointer && !reduceMotion) {
+  document.querySelectorAll('.button, .slider-controls button, .social-links a').forEach((control) => {
+    control.addEventListener('pointermove', (event) => {
+      const rect = control.getBoundingClientRect();
+      const x = event.clientX - (rect.left + rect.width / 2);
+      const y = event.clientY - (rect.top + rect.height / 2);
+      control.style.translate = `${(x * 0.18).toFixed(1)}px ${(y * 0.3).toFixed(1)}px`;
+    });
+    control.addEventListener('pointerleave', () => {
+      control.style.translate = '';
+    });
+  });
+}
+
+// Client names scroll as a seamless marquee.
+const logoRow = document.querySelector('.logo-row');
+if (logoRow && logoRow.children.length) {
+  const group = document.createElement('div');
+  group.className = 'logo-group';
+  group.append(...logoRow.children);
+  const copy = group.cloneNode(true);
+  copy.setAttribute('aria-hidden', 'true');
+  const logoTrack = document.createElement('div');
+  logoTrack.className = 'logo-track';
+  logoTrack.append(group, copy);
+  logoRow.append(logoTrack);
+}
+
+// Reading progress along the bottom of the header.
+const siteHeader = document.querySelector('.site-header');
+if (siteHeader) {
+  const bar = document.createElement('span');
+  bar.className = 'scroll-progress';
+  bar.setAttribute('aria-hidden', 'true');
+  siteHeader.append(bar);
+  const syncProgress = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.setProperty('--progress', max > 0 ? (window.scrollY / max).toFixed(4) : '0');
+  };
+  window.addEventListener('scroll', syncProgress, { passive: true });
+  window.addEventListener('resize', syncProgress);
+  syncProgress();
+}
+
+// Soft light follows the pointer across dark sections.
+if (finePointer) {
+  document.querySelectorAll('.hero, .industries, .locations-section, .contact-section, .inner-hero, .site-footer').forEach((section) => {
+    const light = document.createElement('span');
+    light.className = 'section-spotlight';
+    light.setAttribute('aria-hidden', 'true');
+    section.prepend(light);
+    section.addEventListener('pointermove', (event) => {
+      const rect = section.getBoundingClientRect();
+      light.style.setProperty('--sx', `${event.clientX - rect.left}px`);
+      light.style.setProperty('--sy', `${event.clientY - rect.top}px`);
+    });
+  });
+}
 
 // Hero visual: depth parallax, live orbit nodes and links from each satellite to the mark.
 const heroVisual = document.querySelector('.hero-visual');

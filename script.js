@@ -103,6 +103,17 @@ document.querySelector('.slider-next')?.addEventListener('click', () => {
   activeSlide = Math.min(cards.length - visibleCards(), activeSlide + 1);
   updateSlider();
 });
+let dragStart = null;
+track?.addEventListener('pointerdown', (event) => {
+  dragStart = event.clientX;
+});
+window.addEventListener('pointerup', (event) => {
+  if (dragStart === null) return;
+  const distance = event.clientX - dragStart;
+  dragStart = null;
+  if (Math.abs(distance) < 50) return;
+  document.querySelector(distance < 0 ? '.slider-next' : '.slider-prev')?.click();
+});
 window.addEventListener('resize', updateSlider);
 updateSlider();
 
