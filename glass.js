@@ -8,8 +8,8 @@ const whenVisible = (element, onChange, rootMargin = '0px') => {
 };
 
 // Glass cards: cursor spotlight, gradient edge and gentle 3D tilt.
-const cardSelector = '.service-card, .audience-card, .industry-list > a, .industry-stats > div, .stat-grid > div, .testimonial-card, .insight-card, .podcast-note, .proof-note, .hero-glass-card, .floating-tag, .glass-form, .inner-card, .inner-post-card, .inner-story-block';
-const tiltSelector = '.service-card, .audience-card, .insight-card, .testimonial-card, .inner-card, .inner-post-card';
+const cardSelector = '.service-card, .capability-card, .launch-card, .leader-card, .audience-card, .industry-list > a, .industry-stats > div, .stat-grid > div, .testimonial-card, .insight-card, .podcast-note, .proof-note, .hero-glass-card, .floating-tag, .glass-form, .inner-card, .inner-post-card, .inner-story-block';
+const tiltSelector = '.service-card, .capability-card, .launch-card, .leader-card, .audience-card, .insight-card, .testimonial-card, .inner-card, .inner-post-card';
 const glassCards = [...document.querySelectorAll(cardSelector)];
 glassCards.forEach((card) => {
   card.classList.add('glass-card');
@@ -363,6 +363,203 @@ if (orb) {
   whenVisible(orb, (visible) => {
     inView = visible;
     if (visible && active < 0 && !reduceMotion) setActive(0);
+    if (visible) startCycle();
+    else stopCycle();
+  });
+}
+
+// Why one partner: vendors scatter around your team, then gather around Hexa.
+const whyStage = document.querySelector('.why-stage');
+if (whyStage) {
+  const section = whyStage.closest('.why-section');
+  const toggles = [...section.querySelectorAll('.why-toggle button')];
+  const texts = [...section.querySelectorAll('.why-text p')];
+  const chips = [...whyStage.querySelectorAll('.why-chip')];
+  const core = whyStage.querySelector('.why-core');
+  const lines = whyStage.querySelector('.why-lines');
+  lines.innerHTML = '<defs><linearGradient id="why-gradient" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e719aa"/><stop offset="1" stop-color="#2f58ff"/></linearGradient></defs>';
+  const paths = chips.map(() => {
+    const path = document.createElementNS(svgNS, 'path');
+    path.classList.add('why-line');
+    lines.append(path);
+    return path;
+  });
+  // Scattered, uneven positions for the usual way; an even ring for Hexa.
+  const usual = [[16, 18, -7], [78, 14, 5], [90, 46, -4], [74, 84, 6], [36, 88, -5], [9, 62, 4], [50, 9, -3]];
+  let mode = 'usual';
+  let timer = 0;
+  let userChose = false;
+  let inView = false;
+  let drawUntil = 0;
+
+  const layout = () => {
+    chips.forEach((chip, index) => {
+      if (mode === 'usual') {
+        const [x, y, tilt] = usual[index % usual.length];
+        chip.style.left = `${x}%`;
+        chip.style.top = `${y}%`;
+        chip.style.setProperty('--tilt', `${tilt}deg`);
+      } else {
+        const angle = (index / chips.length) * Math.PI * 2 - Math.PI / 2;
+        chip.style.left = `${50 + Math.cos(angle) * 34}%`;
+        chip.style.top = `${50 + Math.sin(angle) * 32}%`;
+        chip.style.setProperty('--tilt', '0deg');
+      }
+    });
+  };
+  const drawLines = () => {
+    const box = whyStage.getBoundingClientRect();
+    const coreBox = core.getBoundingClientRect();
+    const cx = coreBox.left + coreBox.width / 2 - box.left;
+    const cy = coreBox.top + coreBox.height / 2 - box.top;
+    lines.querySelector('linearGradient').setAttribute('x2', String(box.width));
+    chips.forEach((chip, index) => {
+      const r = chip.getBoundingClientRect();
+      const x = r.left + r.width / 2 - box.left;
+      const y = r.top + r.height / 2 - box.top;
+      const bend = mode === 'usual' ? (index % 2 ? 0.45 : -0.45) : 0;
+      const qx = (cx + x) / 2 + (y - cy) * bend;
+      const qy = (cy + y) / 2 - (x - cx) * bend;
+      paths[index].setAttribute('d', `M${cx.toFixed(1)} ${cy.toFixed(1)}Q${qx.toFixed(1)} ${qy.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}`);
+    });
+    if (performance.now() < drawUntil) requestAnimationFrame(drawLines);
+  };
+  const redraw = (duration = 1300) => {
+    const running = performance.now() < drawUntil;
+    drawUntil = performance.now() + duration;
+    if (!running) requestAnimationFrame(drawLines);
+  };
+  const setMode = (next) => {
+    mode = next;
+    whyStage.dataset.mode = next;
+    toggles.forEach((button) => {
+      const active = button.dataset.mode === next;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    texts.forEach((text) => {
+      text.hidden = text.dataset.mode !== next;
+    });
+    layout();
+    redraw();
+  };
+  const stopCycle = () => window.clearInterval(timer);
+  const startCycle = () => {
+    stopCycle();
+    if (reduceMotion || userChose || !inView) return;
+    timer = window.setInterval(() => setMode(mode === 'usual' ? 'hexa' : 'usual'), 5200);
+  };
+  toggles.forEach((button) => button.addEventListener('click', () => {
+    userChose = true;
+    stopCycle();
+    setMode(button.dataset.mode);
+  }));
+  window.addEventListener('resize', () => redraw(50));
+  setMode('usual');
+  whenVisible(section, (visible) => {
+    inView = visible;
+    if (visible) startCycle();
+    else stopCycle();
+  });
+}
+
+// Design, build, run: the flow follows whichever capability is in focus.
+const capabilityGrid = document.querySelector('.capability-grid');
+if (capabilityGrid) {
+  const capCards = [...capabilityGrid.querySelectorAll('.capability-card')];
+  const steps = [...document.querySelectorAll('.cap-flow span')];
+  const focus = (key) => {
+    capCards.forEach((card) => card.classList.toggle('is-focus', card.dataset.cap === key));
+    steps.forEach((step) => step.classList.toggle('is-active', step.dataset.step === key));
+  };
+  capCards.forEach((card) => {
+    card.addEventListener('pointerenter', () => focus(card.dataset.cap));
+    card.addEventListener('focusin', () => focus(card.dataset.cap));
+    card.querySelectorAll('.cap-depends button').forEach((button) => button.addEventListener('click', () => {
+      const target = document.getElementById(button.dataset.target);
+      if (!target) return;
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      focus(target.dataset.cap);
+      target.classList.remove('is-flash');
+      void target.offsetWidth;
+      target.classList.add('is-flash');
+    }));
+  });
+  capabilityGrid.addEventListener('pointerleave', () => focus(''));
+}
+
+// Case studies: tabs advance on their own until someone picks one, and numbers count up.
+const work = document.querySelector('.work-section');
+if (work) {
+  const tabs = [...work.querySelectorAll('.work-tabs button')];
+  const panels = [...work.querySelectorAll('.work-panel')];
+  const duration = 8000;
+  work.style.setProperty('--work-duration', `${duration}ms`);
+  let active = 0;
+  let timer = 0;
+  let userChose = false;
+  let inView = false;
+  const countUp = (panel) => {
+    if (reduceMotion) return;
+    panel.querySelectorAll('[data-count]').forEach((number) => {
+      const target = Number(number.dataset.count);
+      const decimals = number.dataset.count.includes('.') ? 1 : 0;
+      const start = performance.now();
+      const step = (now) => {
+        const progress = Math.min(1, (now - start) / 1200);
+        number.textContent = (target * (1 - (1 - progress) ** 3)).toFixed(decimals);
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  };
+  const show = (index) => {
+    active = index;
+    tabs.forEach((tab, tabIndex) => {
+      tab.classList.toggle('is-active', tabIndex === index);
+      tab.setAttribute('aria-selected', String(tabIndex === index));
+      // Restart the progress bar on the newly active tab.
+      const bar = tab.querySelector('.work-progress');
+      bar.style.animation = 'none';
+      void bar.offsetWidth;
+      bar.style.animation = '';
+    });
+    panels.forEach((panel, panelIndex) => {
+      panel.hidden = panelIndex !== index;
+      panel.classList.toggle('is-active', panelIndex === index);
+    });
+    countUp(panels[index]);
+  };
+  const stopCycle = () => window.clearInterval(timer);
+  const startCycle = () => {
+    stopCycle();
+    if (reduceMotion || userChose || !inView) return;
+    timer = window.setInterval(() => show((active + 1) % tabs.length), duration);
+  };
+  tabs.forEach((tab, index) => tab.addEventListener('click', () => {
+    userChose = true;
+    stopCycle();
+    work.classList.add('is-paused');
+    show(index);
+  }));
+  const stage = work.querySelector('.work-stage');
+  stage.addEventListener('pointerenter', () => {
+    stopCycle();
+    work.classList.add('is-paused');
+  });
+  stage.addEventListener('pointerleave', () => {
+    if (userChose) return;
+    work.classList.remove('is-paused');
+    show(active);
+    startCycle();
+  });
+  let counted = false;
+  whenVisible(work, (visible) => {
+    inView = visible;
+    if (visible && !counted) {
+      counted = true;
+      show(0);
+    }
     if (visible) startCycle();
     else stopCycle();
   });
