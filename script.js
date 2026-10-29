@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', () => {
 const header = document.querySelector('.site-header');
 const menuToggle = document.querySelector('.menu-toggle');
 const mainNav = document.querySelector('.main-nav');
@@ -85,6 +86,7 @@ const currentSlide = document.querySelector('.current-slide');
 let activeSlide = 0;
 const visibleCards = () => window.innerWidth <= 580 ? 1 : window.innerWidth <= 1050 ? 2 : 3;
 const updateSlider = () => {
+  if (!track || !cards.length || !progress || !currentSlide) return;
   const maxSlide = Math.max(0, cards.length - visibleCards());
   activeSlide = Math.min(activeSlide, maxSlide);
   const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 15;
@@ -93,11 +95,11 @@ const updateSlider = () => {
   progress.style.width = `${((activeSlide + 1) / cards.length) * 100}%`;
   currentSlide.textContent = String(activeSlide + 1).padStart(2, '0');
 };
-document.querySelector('.slider-prev').addEventListener('click', () => {
+document.querySelector('.slider-prev')?.addEventListener('click', () => {
   activeSlide = Math.max(0, activeSlide - 1);
   updateSlider();
 });
-document.querySelector('.slider-next').addEventListener('click', () => {
+document.querySelector('.slider-next')?.addEventListener('click', () => {
   activeSlide = Math.min(cards.length - visibleCards(), activeSlide + 1);
   updateSlider();
 });
@@ -105,7 +107,7 @@ window.addEventListener('resize', updateSlider);
 updateSlider();
 
 const contactForm = document.querySelector('.contact-form');
-contactForm.addEventListener('submit', (event) => {
+contactForm?.addEventListener('submit', (event) => {
   event.preventDefault();
   if (!contactForm.reportValidity()) return;
   const data = new FormData(contactForm);
@@ -135,4 +137,5 @@ document.addEventListener('keydown', (event) => {
     menuToggle.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('menu-open');
   }
+});
 });
