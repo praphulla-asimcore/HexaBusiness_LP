@@ -1,6 +1,6 @@
 # Hexa Business Website
 
-A responsive, static homepage redesign for Hexa Business.
+A responsive, static homepage redesign for Hexa Business, including a muted, optimized hero background video and its still poster.
 
 ## Preview locally
 
